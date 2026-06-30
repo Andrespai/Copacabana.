@@ -250,6 +250,8 @@ async function startCamera(){
     if(currentStream){
       currentStream.getTracks().forEach(t => t.stop());
     }
+    streaming = false;
+    lastVideoTime = -1;
     const stream = await navigator.mediaDevices.getUserMedia({
       video: { facingMode: currentFacing, width: 1280, height: 960 }
     });
@@ -264,7 +266,8 @@ async function startCamera(){
     }
   }catch(e){
     console.error(e);
-    setStatus('No se pudo acceder a la cámara: ' + (e.message || e), 'error');
+    streaming = false;
+    setStatus('No se pudo cambiar de cámara: ' + (e.message || e) + ' — toca "Cambiar cámara" para volver a intentar.', 'error');
   }
 }
 
@@ -273,7 +276,7 @@ document.getElementById('flipBtn').addEventListener('click', () => {
   startCamera();
 });
 
-let maskInvert = false;
+let maskInvert = true;
 document.getElementById('invertBtn').addEventListener('click', () => {
   maskInvert = !maskInvert;
 });
