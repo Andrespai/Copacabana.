@@ -46,7 +46,7 @@
   }
 
   canvas, video{ position:absolute; top:0; left:0; width:100%; height:100%; object-fit: cover; }
-  video{ visibility:hidden; }
+  video{ position:absolute; width:1px; height:1px; opacity:0.01; pointer-events:none; }
 
   .status{
     position:absolute; top:14px; left:14px; right:14px;
@@ -236,9 +236,9 @@ function drawFrame(w, h){
 }
 
 function render(){
-  if(!frozen && streaming){
-    canvas.width = video.videoWidth || 1280;
-    canvas.height = video.videoHeight || 960;
+  if(!frozen && streaming && video.videoWidth > 0){
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
     const w = canvas.width, h = canvas.height;
     const f = Math.round(Math.min(w,h) * FRAME);
 
@@ -269,11 +269,29 @@ async function startCamera(){
     currentStream = stream;
     video.srcObject = stream;
     await video.play();
+
+    setStatus('Esperando primer cuadro de la cámara…');
+    await new Promise((resolve, reject) => {
+      let tries = 0;
+      const check = () => {
+        if(video.videoWidth > 0 && video.videoHeight > 0){
+          resolve();
+        } else if(tries > 100){
+          reject(new Error('La cámara no entregó imagen (videoWidth=0)'));
+        } else {
+          tries++;
+          requestAnimationFrame(check);
+        }
+      };
+      check();
+    });
+
     streaming = true;
     setStatus('Listo', 'ready');
     shootBtn.disabled = false;
   }catch(e){
     console.error(e);
+    streaming = false;
     setStatus('No se pudo acceder a la cámara: ' + (e.message || e), 'error');
   }
 }
