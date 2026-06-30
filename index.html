@@ -144,83 +144,67 @@ function setStatus(text, state){
   statusDot.className = 'dot' + (state ? ' ' + state : '');
 }
 
-// Fondo ilustrado de Copacabana (vectorial, sin derechos de autor).
-// Para usar tu propia foto: cambia esta función por bgImg.src = "bg.jpg";
-function buildIllustratedBackground(){
-  const c = document.createElement('canvas');
-  c.width = 1280; c.height = 960;
-  const bctx = c.getContext('2d');
+// Fondo: foto real de Río subida al repo (mismo nombre, junto a index.html)
+bgImg.onload = () => { bgReady = true; checkReady(); };
+bgImg.onerror = () => { setStatus('No se encontró copacabana.jpg en el repo', 'error'); };
+bgImg.src = "copacabana.jpg";
 
-  const sky = bctx.createLinearGradient(0,0,0,560);
-  sky.addColorStop(0, '#FF8C5A');
-  sky.addColorStop(0.5, '#FFC94D');
-  sky.addColorStop(1, '#F3E3C3');
-  bctx.fillStyle = sky;
-  bctx.fillRect(0,0,1280,560);
+// --- Ala delta animada que cruza la escena ---
+let glideX = -200;
+let glideDir = 1;
+const glideSpeed = 1.6;
 
-  bctx.beginPath();
-  bctx.arc(950, 240, 90, 0, Math.PI*2);
-  bctx.fillStyle = '#FFE9B0';
-  bctx.fill();
+function drawHangGlider(targetCtx, w, h){
+  const y = h * 0.22 + Math.sin(glideX * 0.01) * 18;
+  const scale = w / 1280;
+  const x = glideX * scale;
+  const s = 70 * scale;
 
-  bctx.fillStyle = '#1C5C53';
-  bctx.beginPath();
-  bctx.moveTo(700,560);
-  bctx.quadraticCurveTo(820,260,920,300);
-  bctx.quadraticCurveTo(1000,330,1040,560);
-  bctx.closePath();
-  bctx.fill();
+  targetCtx.save();
+  targetCtx.translate(x, y);
+  if(glideDir < 0) targetCtx.scale(-1, 1);
 
-  bctx.fillStyle = '#13403A';
-  bctx.beginPath();
-  bctx.moveTo(960,560);
-  bctx.quadraticCurveTo(1080,360,1160,400);
-  bctx.quadraticCurveTo(1220,420,1280,560);
-  bctx.closePath();
-  bctx.fill();
+  targetCtx.fillStyle = 'rgba(255, 201, 77, 0.95)';
+  targetCtx.strokeStyle = 'rgba(10,36,33,0.6)';
+  targetCtx.lineWidth = 2;
+  targetCtx.beginPath();
+  targetCtx.moveTo(0, -s*0.15);
+  targetCtx.lineTo(s, s*0.35);
+  targetCtx.lineTo(0, s*0.15);
+  targetCtx.lineTo(-s, s*0.35);
+  targetCtx.closePath();
+  targetCtx.fill();
+  targetCtx.stroke();
 
-  for(let i=0;i<22;i++){
-    const x = i*60;
-    const h = 60 + Math.sin(i*1.3)*20 + 40;
-    bctx.fillStyle = i%2===0 ? '#EFE0C6' : '#E2D2B6';
-    bctx.fillRect(x, 560-h, 50, h);
-  }
+  targetCtx.fillStyle = 'rgba(255, 107, 74, 0.9)';
+  targetCtx.beginPath();
+  targetCtx.moveTo(0, -s*0.15);
+  targetCtx.lineTo(s*0.5, s*0.05);
+  targetCtx.lineTo(0, s*0.15);
+  targetCtx.lineTo(-s*0.5, s*0.05);
+  targetCtx.closePath();
+  targetCtx.fill();
 
-  const sea = bctx.createLinearGradient(0,560,0,820);
-  sea.addColorStop(0, '#0E4F4A');
-  sea.addColorStop(1, '#0A3733');
-  bctx.fillStyle = sea;
-  bctx.fillRect(0,560,1280,260);
+  targetCtx.strokeStyle = 'rgba(10,36,33,0.8)';
+  targetCtx.lineWidth = 2;
+  targetCtx.beginPath();
+  targetCtx.moveTo(0, s*0.15);
+  targetCtx.lineTo(0, s*0.55);
+  targetCtx.stroke();
+  targetCtx.fillStyle = '#0A2421';
+  targetCtx.beginPath();
+  targetCtx.arc(0, s*0.62, s*0.09, 0, Math.PI*2);
+  targetCtx.fill();
 
-  bctx.strokeStyle = 'rgba(243,227,195,0.25)';
-  bctx.lineWidth = 3;
-  for(let y=600; y<820; y+=30){
-    bctx.beginPath();
-    for(let x=0;x<=1280;x+=20){
-      const yy = y + Math.sin((x+y)*0.03)*6;
-      x===0 ? bctx.moveTo(x,yy) : bctx.lineTo(x,yy);
-    }
-    bctx.stroke();
-  }
-
-  bctx.fillStyle = '#F3E3C3';
-  bctx.fillRect(0,800,1280,160);
-  bctx.strokeStyle = '#0E4F4A';
-  bctx.lineWidth = 14;
-  for(let y=810; y<960; y+=28){
-    bctx.beginPath();
-    for(let x=-20;x<=1300;x+=40){
-      const yy = y + Math.sin(x*0.02)*10;
-      x===-20 ? bctx.moveTo(x,yy) : bctx.lineTo(x,yy);
-    }
-    bctx.stroke();
-  }
-
-  bgImg.src = c.toDataURL('image/jpeg', 0.92);
+  targetCtx.restore();
 }
 
-bgImg.onload = () => { bgReady = true; checkReady(); };
-buildIllustratedBackground();
+function updateGlider(w){
+  glideX += glideSpeed * glideDir;
+  const margin = 250;
+  if(glideX > (1280) + margin) glideDir = -1;
+  if(glideX < -margin) glideDir = 1;
+}
 
 function checkReady(){
   if(modelReady && bgReady){
@@ -302,6 +286,10 @@ function drawComposite(result){
 
   // 1. fondo Copacabana
   drawCover(bgImg, w, h, ctx);
+
+  // 1b. ala delta volando en el cielo
+  updateGlider(w);
+  drawHangGlider(ctx, w, h);
 
   // 2. construir máscara binaria (categoría 0 = persona en selfie_segmenter)
   const mask = result.categoryMask;
