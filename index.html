@@ -106,6 +106,7 @@
 
 <div class="controls">
   <button class="primary" id="shootBtn" disabled>Tomar foto</button>
+  <button class="secondary" id="flipBtn">Cambiar cámara</button>
   <button class="secondary" id="retryBtn" style="display:none;">Repetir</button>
   <button class="secondary" id="downloadBtn" style="display:none;">Descargar</button>
 </div>
@@ -149,61 +150,54 @@ bgImg.onload = () => { bgReady = true; checkReady(); };
 bgImg.onerror = () => { setStatus('No se encontró copacabana.jpg en el repo', 'error'); };
 bgImg.src = "copacabana.jpg";
 
-// --- Ala delta animada que cruza la escena ---
-let glideX = -200;
-let glideDir = 1;
-const glideSpeed = 1.6;
+// --- Ala delta digital, posicionada sobre la persona (como si volara con ella) ---
+// Si tienes una foto recortada (PNG transparente) del ala delta real, súbela como
+// "hangglider.png" junto a index.html y descomenta estas 2 líneas para usarla en vez del dibujo:
+// let realGlider = new Image(); let realGliderReady = false;
+// realGlider.onload = () => realGliderReady = true; realGlider.src = "hangglider.png";
 
-function drawHangGlider(targetCtx, w, h){
-  const y = h * 0.22 + Math.sin(glideX * 0.01) * 18;
-  const scale = w / 1280;
-  const x = glideX * scale;
-  const s = 70 * scale;
+function drawHangGlider(targetCtx, w, h, personBoundsY){
+  const cx = w * 0.5;
+  const topY = personBoundsY !== null ? Math.max(personBoundsY - h*0.22, h*0.04) : h*0.12;
+  const s = w * 0.34;
 
   targetCtx.save();
-  targetCtx.translate(x, y);
-  if(glideDir < 0) targetCtx.scale(-1, 1);
+  targetCtx.translate(cx, topY);
 
-  targetCtx.fillStyle = 'rgba(255, 201, 77, 0.95)';
-  targetCtx.strokeStyle = 'rgba(10,36,33,0.6)';
-  targetCtx.lineWidth = 2;
+  targetCtx.fillStyle = 'rgba(255, 201, 77, 0.96)';
+  targetCtx.strokeStyle = 'rgba(10,36,33,0.65)';
+  targetCtx.lineWidth = 3;
   targetCtx.beginPath();
-  targetCtx.moveTo(0, -s*0.15);
-  targetCtx.lineTo(s, s*0.35);
-  targetCtx.lineTo(0, s*0.15);
-  targetCtx.lineTo(-s, s*0.35);
+  targetCtx.moveTo(0, -s*0.12);
+  targetCtx.lineTo(s*0.55, s*0.22);
+  targetCtx.lineTo(0, s*0.10);
+  targetCtx.lineTo(-s*0.55, s*0.22);
   targetCtx.closePath();
   targetCtx.fill();
   targetCtx.stroke();
 
-  targetCtx.fillStyle = 'rgba(255, 107, 74, 0.9)';
+  targetCtx.fillStyle = 'rgba(255, 107, 74, 0.92)';
   targetCtx.beginPath();
-  targetCtx.moveTo(0, -s*0.15);
-  targetCtx.lineTo(s*0.5, s*0.05);
-  targetCtx.lineTo(0, s*0.15);
-  targetCtx.lineTo(-s*0.5, s*0.05);
+  targetCtx.moveTo(0, -s*0.12);
+  targetCtx.lineTo(s*0.28, s*0.04);
+  targetCtx.lineTo(0, s*0.10);
+  targetCtx.lineTo(-s*0.28, s*0.04);
   targetCtx.closePath();
   targetCtx.fill();
 
-  targetCtx.strokeStyle = 'rgba(10,36,33,0.8)';
-  targetCtx.lineWidth = 2;
+  // barra de control, hacia donde se sujetaría la persona
+  targetCtx.strokeStyle = 'rgba(10,36,33,0.7)';
+  targetCtx.lineWidth = 3;
   targetCtx.beginPath();
-  targetCtx.moveTo(0, s*0.15);
-  targetCtx.lineTo(0, s*0.55);
+  targetCtx.moveTo(-s*0.18, s*0.10);
+  targetCtx.lineTo(-s*0.18, s*0.34);
+  targetCtx.moveTo(s*0.18, s*0.10);
+  targetCtx.lineTo(s*0.18, s*0.34);
+  targetCtx.moveTo(-s*0.18, s*0.34);
+  targetCtx.lineTo(s*0.18, s*0.34);
   targetCtx.stroke();
-  targetCtx.fillStyle = '#0A2421';
-  targetCtx.beginPath();
-  targetCtx.arc(0, s*0.62, s*0.09, 0, Math.PI*2);
-  targetCtx.fill();
 
   targetCtx.restore();
-}
-
-function updateGlider(w){
-  glideX += glideSpeed * glideDir;
-  const margin = 250;
-  if(glideX > (1280) + margin) glideDir = -1;
-  if(glideX < -margin) glideDir = 1;
 }
 
 function checkReady(){
@@ -245,21 +239,37 @@ async function initSegmenter(){
   }
 }
 
+let currentFacing = 'user';
+let currentStream = null;
+
 async function startCamera(){
   try{
     setStatus('Pidiendo permiso de cámara…');
+    if(currentStream){
+      currentStream.getTracks().forEach(t => t.stop());
+    }
     const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'user', width: 1280, height: 960 }
+      video: { facingMode: currentFacing, width: 1280, height: 960 }
     });
+    currentStream = stream;
     video.srcObject = stream;
     await video.play();
     streaming = true;
-    initSegmenter();
+    if(!modelReady){
+      initSegmenter();
+    } else {
+      setStatus('Listo', 'ready');
+    }
   }catch(e){
     console.error(e);
     setStatus('No se pudo acceder a la cámara: ' + (e.message || e), 'error');
   }
 }
+
+document.getElementById('flipBtn').addEventListener('click', () => {
+  currentFacing = currentFacing === 'user' ? 'environment' : 'user';
+  startCamera();
+});
 
 function drawCover(image, w, h, targetCtx){
   const ir = image.width / image.height;
@@ -295,10 +305,6 @@ function drawComposite(result){
   // 1. fondo Copacabana
   drawCover(bgImg, w, h, ctx);
 
-  // 1b. ala delta volando en el cielo
-  updateGlider(w);
-  drawHangGlider(ctx, w, h);
-
   // 2. construir máscara binaria (categoría 0 = persona en selfie_segmenter)
   const mask = result.categoryMask;
   const maskData = mask.getAsUint8Array();
@@ -309,7 +315,7 @@ function drawComposite(result){
   const maskCtx = maskCanvas.getContext('2d');
   const imgData = maskCtx.createImageData(mw, mh);
   for(let i=0;i<maskData.length;i++){
-    const isPerson = maskData[i] === 0 ? 255 : 0;
+    const isPerson = maskData[i] === 1 ? 255 : 0;
     imgData.data[i*4+0] = 255;
     imgData.data[i*4+1] = 255;
     imgData.data[i*4+2] = 255;
