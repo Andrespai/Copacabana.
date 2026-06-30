@@ -6,86 +6,30 @@
 <title>Photo Booth · Copacabana</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Fraunces:wght@400;600;900&family=Space+Mono:wght@400;700&display=swap');
-
-  :root{
-    --sand:#F3E3C3;
-    --teal:#0E4F4A;
-    --coral:#FF6B4A;
-    --ink:#0A2421;
-    --sun:#FFC94D;
-  }
-
-  *{box-sizing:border-box; margin:0; padding:0;}
-
-  body{
-    background: var(--ink);
-    color: var(--sand);
-    font-family: 'Space Mono', monospace;
-    min-height: 100vh;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    padding: 24px 16px 60px;
-  }
-
-  header{ text-align:center; margin-bottom: 24px; max-width: 640px; }
-  .eyebrow{ font-size: 12px; letter-spacing: 3px; text-transform: uppercase; color: var(--coral); margin-bottom: 10px; }
-  h1{ font-family: 'Fraunces', serif; font-weight: 900; font-size: clamp(28px, 6vw, 52px); line-height: 1.0; color: var(--sand); }
-  h1 em{ font-style: italic; color: var(--sun); }
-  .sub{ margin-top: 14px; font-size: 13px; color: #C9D8D4; line-height: 1.6; }
-
-  .stage{
-    position: relative;
-    width: min(640px, 92vw);
-    aspect-ratio: 4/3;
-    border-radius: 18px;
-    overflow: hidden;
-    background: #06201D;
-    box-shadow: 0 30px 60px -20px rgba(0,0,0,0.6);
-    border: 1px solid rgba(255,201,77,0.2);
-  }
-
-  canvas, video{ position:absolute; top:0; left:0; width:100%; height:100%; object-fit: cover; }
-  video{ position:absolute; width:1px; height:1px; opacity:0.01; pointer-events:none; }
-
-  .status{
-    position:absolute; top:14px; left:14px; right:14px;
-    font-size: 11px; letter-spacing: 1px;
-    background: rgba(10,36,33,0.85);
-    backdrop-filter: blur(6px);
-    padding: 8px 12px; border-radius: 12px;
-    display:flex; align-items:flex-start; gap:8px; z-index: 5;
-  }
-
-  .dot{ width:8px; height:8px; border-radius:50%; background: #FF6B4A; flex-shrink:0; margin-top:3px; }
-  .dot.ready{ background: #6CCB95; }
-  .dot.error{ background: #FF4040; }
-
-  .controls{ width: min(640px, 92vw); display:flex; gap:12px; margin-top: 20px; flex-wrap: wrap; justify-content:center; }
-
-  button{
-    font-family: 'Space Mono', monospace; font-weight: 700; font-size: 13px;
-    letter-spacing: 1px; text-transform: uppercase;
-    padding: 14px 26px; border-radius: 100px; border: none; cursor: pointer;
-  }
-  .primary{ background: var(--coral); color: var(--ink); }
-  .primary:disabled{ background: #5a4438; color: #998a7d; cursor: not-allowed; }
-  .secondary{ background: transparent; color: var(--sand); border: 1px solid rgba(243,227,195,0.3); }
-
-  .countdown{
-    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
-    font-family:'Fraunces', serif; font-weight:900; font-size: 130px;
-    color: var(--sun); text-shadow: 0 0 40px rgba(255,201,77,0.6);
-    pointer-events:none; opacity:0; transition: opacity 0.2s ease; z-index:6;
-  }
+  :root{ --sand:#F3E3C3; --coral:#FF6B4A; --ink:#0A2421; --sun:#FFC94D; }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  body{ background:var(--ink); color:var(--sand); font-family:'Space Mono',monospace; min-height:100vh; display:flex; flex-direction:column; align-items:center; padding:24px 16px 60px; }
+  header{ text-align:center; margin-bottom:24px; max-width:640px; }
+  .eyebrow{ font-size:12px; letter-spacing:3px; text-transform:uppercase; color:var(--coral); margin-bottom:10px; }
+  h1{ font-family:'Fraunces',serif; font-weight:900; font-size:clamp(28px,6vw,52px); line-height:1.0; }
+  h1 em{ font-style:italic; color:var(--sun); }
+  .sub{ margin-top:14px; font-size:13px; color:#C9D8D4; line-height:1.6; }
+  .stage{ position:relative; width:min(640px,92vw); aspect-ratio:4/3; border-radius:18px; overflow:hidden; background:#000; box-shadow:0 30px 60px -20px rgba(0,0,0,0.6); border:1px solid rgba(255,201,77,0.2); }
+  #output{ position:absolute; top:0; left:0; width:100%; height:100%; }
+  .status{ position:absolute; top:14px; left:14px; right:14px; font-size:11px; letter-spacing:1px; background:rgba(10,36,33,0.85); backdrop-filter:blur(6px); padding:8px 12px; border-radius:12px; display:flex; align-items:flex-start; gap:8px; z-index:5; }
+  .dot{ width:8px; height:8px; border-radius:50%; background:#FF6B4A; flex-shrink:0; margin-top:3px; }
+  .dot.ready{ background:#6CCB95; }
+  .dot.error{ background:#FF4040; }
+  .countdown{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-family:'Fraunces',serif; font-weight:900; font-size:130px; color:var(--sun); text-shadow:0 0 40px rgba(255,201,77,0.6); pointer-events:none; opacity:0; transition:opacity 0.2s ease; z-index:6; }
   .countdown.show{ opacity:1; }
-
   .flash{ position:absolute; inset:0; background:white; opacity:0; pointer-events:none; z-index:7; }
-  .flash.go{ animation: flashpop 0.4s ease-out; }
+  .flash.go{ animation:flashpop 0.4s ease-out; }
   @keyframes flashpop{ 0%{opacity:0.9;} 100%{opacity:0;} }
-
-  footer{ margin-top: 40px; font-size: 11px; color: #6e8d86; text-align:center; max-width: 480px; line-height: 1.7; }
-  footer strong{ color: #C9D8D4; }
+  .controls{ width:min(640px,92vw); display:flex; gap:12px; margin-top:20px; flex-wrap:wrap; justify-content:center; }
+  button{ font-family:'Space Mono',monospace; font-weight:700; font-size:13px; letter-spacing:1px; text-transform:uppercase; padding:14px 26px; border-radius:100px; border:none; cursor:pointer; }
+  .primary{ background:var(--coral); color:var(--ink); }
+  .primary:disabled{ background:#5a4438; color:#998a7d; cursor:not-allowed; }
+  .secondary{ background:transparent; color:var(--sand); border:1px solid rgba(243,227,195,0.3); }
 </style>
 </head>
 <body>
@@ -93,11 +37,10 @@
 <header>
   <div class="eyebrow">Sala Copacabana</div>
   <h1>Tu foto, <em>enmarcada</em>,<br>directo desde la oficina</h1>
-  <p class="sub">Sostén el ala delta y sonríe — el marco de Copacabana se agrega al instante, sin IA ni procesamiento por foto.</p>
+  <p class="sub">Sostén el ala delta y sonríe — el marco de Copacabana se agrega al instante.</p>
 </header>
 
 <div class="stage">
-  <video id="video" autoplay playsinline muted></video>
   <canvas id="output"></canvas>
   <div class="status"><span class="dot" id="statusDot"></span><span id="statusText">Iniciando cámara…</span></div>
   <div class="countdown" id="countdown"></div>
@@ -111,9 +54,8 @@
   <button class="secondary" id="downloadBtn" style="display:none;">Descargar</button>
 </div>
 
-<footer>
-  <strong>¿Quieres usar tu propia foto de Río?</strong> sube un archivo <code>copacabana.jpg</code> junto a <code>index.html</code> en el repo — el marco la usa automáticamente.
-</footer>
+<!-- Video fuera de pantalla pero con tamaño real para que el navegador lo decodifique -->
+<video id="video" autoplay playsinline muted style="position:fixed;left:-9999px;top:0;width:640px;height:480px;"></video>
 
 <script>
 const video = document.getElementById('video');
@@ -129,128 +71,69 @@ const flashEl = document.getElementById('flash');
 
 let frozen = false;
 let frozenDataUrl = null;
-let streaming = false;
 let currentFacing = 'user';
 let currentStream = null;
 
 function setStatus(text, state){
   statusText.textContent = text;
-  statusDot.className = 'dot' + (state ? ' ' + state : '');
+  statusDot.className = 'dot' + (state ? ' '+state : '');
 }
 
-// Imagen de fondo para el marco: intenta usar copacabana.jpg si existe,
-// si no, usa una ilustración generada en código (sin derechos de autor).
+// Fondo del marco
 let bgImg = new Image();
 let bgReady = false;
+bgImg.crossOrigin = 'anonymous';
 bgImg.onload = () => { bgReady = true; };
-bgImg.onerror = () => { buildIllustratedBackground(); };
-bgImg.src = "copacabana.jpg";
-
-function buildIllustratedBackground(){
+bgImg.onerror = () => {
   const c = document.createElement('canvas');
-  c.width = 1280; c.height = 960;
+  c.width = 1280; c.height = 200;
   const bctx = c.getContext('2d');
-  const sky = bctx.createLinearGradient(0,0,0,560);
-  sky.addColorStop(0, '#FF8C5A');
-  sky.addColorStop(0.5, '#FFC94D');
-  sky.addColorStop(1, '#F3E3C3');
-  bctx.fillStyle = sky;
-  bctx.fillRect(0,0,1280,560);
-  bctx.beginPath();
-  bctx.arc(950, 240, 90, 0, Math.PI*2);
-  bctx.fillStyle = '#FFE9B0';
-  bctx.fill();
-  bctx.fillStyle = '#1C5C53';
-  bctx.beginPath();
-  bctx.moveTo(700,560);
-  bctx.quadraticCurveTo(820,260,920,300);
-  bctx.quadraticCurveTo(1000,330,1040,560);
-  bctx.closePath();
-  bctx.fill();
-  for(let i=0;i<22;i++){
-    const x = i*60;
-    const h = 60 + Math.sin(i*1.3)*20 + 40;
-    bctx.fillStyle = i%2===0 ? '#EFE0C6' : '#E2D2B6';
-    bctx.fillRect(x, 560-h, 50, h);
-  }
-  const sea = bctx.createLinearGradient(0,560,0,960);
-  sea.addColorStop(0, '#0E4F4A');
-  sea.addColorStop(1, '#0A3733');
-  bctx.fillStyle = sea;
-  bctx.fillRect(0,560,1280,400);
-  bgImg.onerror = null;
-  bgImg.src = c.toDataURL('image/jpeg', 0.92);
-  bgReady = true;
-}
+  const g = bctx.createLinearGradient(0,0,1280,0);
+  g.addColorStop(0,'#FF8C5A'); g.addColorStop(0.5,'#FFC94D'); g.addColorStop(1,'#0E4F4A');
+  bctx.fillStyle = g;
+  bctx.fillRect(0,0,1280,200);
+  bgImg = new Image();
+  bgImg.onload = () => { bgReady = true; };
+  bgImg.src = c.toDataURL();
+};
+bgImg.src = 'copacabana.jpg';
 
-function drawCover(image, w, h, targetCtx){
-  const ir = image.width / image.height;
-  const cr = w / h;
-  let sw, sh, sx, sy;
-  if(ir > cr){
-    sh = image.height; sw = sh * cr; sx = (image.width - sw)/2; sy = 0;
-  } else {
-    sw = image.width; sh = sw / cr; sx = 0; sy = (image.height - sh)/2;
-  }
-  targetCtx.drawImage(image, sx, sy, sw, sh, 0, 0, w, h);
-}
-
-const FRAME = 0.10; // grosor del marco como % del ancho
+const FRAME = 0.12;
 
 function drawFrame(w, h){
-  const f = Math.round(Math.min(w, h) * FRAME);
+  const f = Math.round(h * FRAME);
 
-  // marco superior e inferior con el paisaje
+  // franjas del marco arriba y abajo con la foto de Río
   if(bgReady){
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(0, 0, w, f);
-    ctx.clip();
-    drawCover(bgImg, w, f * 4, ctx);
-    ctx.restore();
-
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(0, h - f, w, f);
-    ctx.clip();
-    ctx.translate(0, h - f);
-    drawCover(bgImg, w, f * 4, ctx);
-    ctx.restore();
+    ctx.drawImage(bgImg, 0, 0, bgImg.width, bgImg.height, 0, 0, w, f);
+    ctx.drawImage(bgImg, 0, 0, bgImg.width, bgImg.height, 0, h-f, w, f);
+  } else {
+    ctx.fillStyle = '#0E4F4A';
+    ctx.fillRect(0, 0, w, f);
+    ctx.fillRect(0, h-f, w, f);
   }
 
-  // bandas laterales sólidas para que quede como marco completo
-  ctx.fillStyle = '#0A2421';
-  ctx.fillRect(0, 0, f * 0.4, h);
-  ctx.fillRect(w - f * 0.4, 0, f * 0.4, h);
-
-  // línea dorada decorativa
+  // línea dorada
   ctx.strokeStyle = 'rgba(255,201,77,0.9)';
-  ctx.lineWidth = Math.max(2, f * 0.04);
-  ctx.strokeRect(f*0.4, f, w - f*0.8, h - f*2);
+  ctx.lineWidth = 3;
+  ctx.strokeRect(4, f+2, w-8, h-f*2-4);
 
-  // texto de marca
+  // texto
   ctx.fillStyle = '#F3E3C3';
-  ctx.font = `700 ${Math.round(f*0.32)}px 'Space Mono', monospace`;
+  ctx.font = `bold ${Math.round(f*0.35)}px monospace`;
   ctx.textAlign = 'center';
-  ctx.fillText('SALA COPACABANA', w/2, f*0.65);
+  ctx.textBaseline = 'middle';
+  ctx.fillText('SALA COPACABANA', w/2, f/2);
 }
 
 function render(){
-  if(!frozen && streaming && video.videoWidth > 0){
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+  if(!frozen && video.readyState >= 2){
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
     const w = canvas.width, h = canvas.height;
-    const f = Math.round(Math.min(w,h) * FRAME);
+    const f = Math.round(h * FRAME);
 
-    ctx.clearRect(0,0,w,h);
-    // cámara en vivo recortada al área interior del marco
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(f*0.4, f, w - f*0.8, h - f*2);
-    ctx.clip();
-    drawCover(video, w, h, ctx);
-    ctx.restore();
-
+    ctx.drawImage(video, 0, f, w, h - f*2);
     drawFrame(w, h);
   }
   requestAnimationFrame(render);
@@ -259,45 +142,25 @@ function render(){
 async function startCamera(){
   try{
     setStatus('Pidiendo permiso de cámara…');
-    if(currentStream){
-      currentStream.getTracks().forEach(t => t.stop());
-    }
-    streaming = false;
+    if(currentStream) currentStream.getTracks().forEach(t => t.stop());
     const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: currentFacing, width: 1280, height: 960 }
+      video: { facingMode: currentFacing }
     });
     currentStream = stream;
     video.srcObject = stream;
-    await video.play();
-
-    setStatus('Esperando primer cuadro de la cámara…');
-    await new Promise((resolve, reject) => {
-      let tries = 0;
-      const check = () => {
-        if(video.videoWidth > 0 && video.videoHeight > 0){
-          resolve();
-        } else if(tries > 100){
-          reject(new Error('La cámara no entregó imagen (videoWidth=0)'));
-        } else {
-          tries++;
-          requestAnimationFrame(check);
-        }
-      };
-      check();
-    });
-
-    streaming = true;
-    setStatus('Listo', 'ready');
-    shootBtn.disabled = false;
+    video.onloadedmetadata = () => {
+      video.play().then(() => {
+        setStatus('Listo', 'ready');
+        shootBtn.disabled = false;
+      });
+    };
   }catch(e){
-    console.error(e);
-    streaming = false;
-    setStatus('No se pudo acceder a la cámara: ' + (e.message || e), 'error');
+    setStatus('Error de cámara: ' + (e.message||e), 'error');
   }
 }
 
-startCamera();
 render();
+startCamera();
 
 document.getElementById('flipBtn').addEventListener('click', () => {
   currentFacing = currentFacing === 'user' ? 'environment' : 'user';
@@ -309,26 +172,21 @@ shootBtn.addEventListener('click', () => {
   shootBtn.disabled = true;
   countdownEl.classList.add('show');
   countdownEl.textContent = n;
-  const interval = setInterval(() => {
+  const iv = setInterval(() => {
     n--;
-    if(n > 0){
-      countdownEl.textContent = n;
-    } else {
-      clearInterval(interval);
+    if(n > 0){ countdownEl.textContent = n; }
+    else {
+      clearInterval(iv);
       countdownEl.classList.remove('show');
-      capture();
+      frozen = true;
+      flashEl.classList.add('go');
+      setTimeout(() => flashEl.classList.remove('go'), 400);
+      frozenDataUrl = canvas.toDataURL('image/jpeg', 0.95);
+      retryBtn.style.display = 'inline-block';
+      downloadBtn.style.display = 'inline-block';
     }
   }, 800);
 });
-
-function capture(){
-  frozen = true;
-  flashEl.classList.add('go');
-  setTimeout(() => flashEl.classList.remove('go'), 400);
-  frozenDataUrl = canvas.toDataURL('image/jpeg', 0.95);
-  retryBtn.style.display = 'inline-block';
-  downloadBtn.style.display = 'inline-block';
-}
 
 retryBtn.addEventListener('click', () => {
   frozen = false;
@@ -341,7 +199,7 @@ downloadBtn.addEventListener('click', () => {
   if(!frozenDataUrl) return;
   const a = document.createElement('a');
   a.href = frozenDataUrl;
-  a.download = `copacabana-${Date.now()}.jpg`;
+  a.download = 'copacabana-' + Date.now() + '.jpg';
   a.click();
 });
 </script>
