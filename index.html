@@ -15,7 +15,6 @@
     --sun:#FFC94D;
   }
 
-  
   *{box-sizing:border-box; margin:0; padding:0;}
 
   body{
@@ -108,6 +107,7 @@
 <div class="controls">
   <button class="primary" id="shootBtn" disabled>Tomar foto</button>
   <button class="secondary" id="flipBtn">Cambiar cámara</button>
+  <button class="secondary" id="invertBtn">Invertir recorte</button>
   <button class="secondary" id="retryBtn" style="display:none;">Repetir</button>
   <button class="secondary" id="downloadBtn" style="display:none;">Descargar</button>
 </div>
@@ -272,6 +272,11 @@ document.getElementById('flipBtn').addEventListener('click', () => {
   startCamera();
 });
 
+let maskInvert = false;
+document.getElementById('invertBtn').addEventListener('click', () => {
+  maskInvert = !maskInvert;
+});
+
 function drawCover(image, w, h, targetCtx){
   const ir = image.width / image.height;
   const cr = w / h;
@@ -316,7 +321,8 @@ function drawComposite(result){
   const maskCtx = maskCanvas.getContext('2d');
   const imgData = maskCtx.createImageData(mw, mh);
   for(let i=0;i<maskData.length;i++){
-    const isPerson = maskData[i] === 1 ? 255 : 0;
+    const personValue = maskInvert ? 0 : 1;
+    const isPerson = maskData[i] === personValue ? 255 : 0;
     imgData.data[i*4+0] = 255;
     imgData.data[i*4+1] = 255;
     imgData.data[i*4+2] = 255;
@@ -370,6 +376,7 @@ retryBtn.addEventListener('click', () => {
   shootBtn.disabled = false;
 });
 
+  
 downloadBtn.addEventListener('click', () => {
   if(!frozenDataUrl) return;
   const a = document.createElement('a');
@@ -380,5 +387,3 @@ downloadBtn.addEventListener('click', () => {
 </script>
 </body>
 </html>
-
-
