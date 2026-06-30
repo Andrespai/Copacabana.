@@ -354,8 +354,8 @@ function drawComposite(result){
   const maskCtx = maskCanvas.getContext('2d');
   const imgData = maskCtx.createImageData(mw, mh);
   for(let i=0;i<maskData.length;i++){
-    const personValue = maskInvert ? 0 : 1;
-    const isPerson = maskData[i] === personValue ? 255 : 0;
+    const v = maskData[i];
+    const isPerson = (maskInvert ? v < 128 : v >= 128) ? 255 : 0;
     imgData.data[i*4+0] = 255;
     imgData.data[i*4+1] = 255;
     imgData.data[i*4+2] = 255;
