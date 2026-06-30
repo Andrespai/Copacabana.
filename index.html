@@ -214,6 +214,12 @@ function checkReady(){
 }
 
 async function initSegmenter(){
+  const timeoutId = setTimeout(() => {
+    if(!modelReady){
+      setStatus('El modelo tardó demasiado en cargar. Revisa tu conexión a internet y recarga la página.', 'error');
+    }
+  }, 15000);
+
   try{
     setStatus('Descargando modelo de IA local…');
     const vision = await FilesetResolver.forVisionTasks(
@@ -222,16 +228,18 @@ async function initSegmenter(){
     imageSegmenter = await ImageSegmenter.createFromOptions(vision, {
       baseOptions: {
         modelAssetPath: "https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/latest/selfie_segmenter.tflite",
-        delegate: "GPU"
+        delegate: "CPU"
       },
       runningMode: "VIDEO",
       outputCategoryMask: true,
       outputConfidenceMasks: false
     });
+    clearTimeout(timeoutId);
     modelReady = true;
     checkReady();
     requestAnimationFrame(renderLoop);
   }catch(err){
+    clearTimeout(timeoutId);
     console.error(err);
     setStatus('Error cargando el modelo: ' + (err.message || err), 'error');
   }
