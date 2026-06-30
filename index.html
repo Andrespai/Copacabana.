@@ -108,6 +108,7 @@
   <button class="primary" id="shootBtn" disabled>Tomar foto</button>
   <button class="secondary" id="flipBtn">Cambiar cámara</button>
   <button class="secondary" id="invertBtn">Invertir recorte</button>
+  <button class="secondary" id="debugBtn">Ver máscara (diagnóstico)</button>
   <button class="secondary" id="retryBtn" style="display:none;">Repetir</button>
   <button class="secondary" id="downloadBtn" style="display:none;">Descargar</button>
 </div>
@@ -277,6 +278,11 @@ document.getElementById('invertBtn').addEventListener('click', () => {
   maskInvert = !maskInvert;
 });
 
+let debugMode = false;
+document.getElementById('debugBtn').addEventListener('click', () => {
+  debugMode = !debugMode;
+});
+
 function drawCover(image, w, h, targetCtx){
   const ir = image.width / image.height;
   const cr = w / h;
@@ -308,14 +314,38 @@ function drawComposite(result){
   canvas.height = video.videoHeight;
   const w = canvas.width, h = canvas.height;
 
-  // 1. fondo Copacabana
-  drawCover(bgImg, w, h, ctx);
-
-  // 2. construir máscara binaria (categoría 0 = persona en selfie_segmenter)
   const mask = result.categoryMask;
   const maskData = mask.getAsUint8Array();
   const mw = mask.width, mh = mask.height;
 
+  if(debugMode){
+    // Modo diagnóstico: muestra el valor crudo de cada píxel como escala de grises
+    let maxVal = 0;
+    for(let i=0;i<maskData.length;i++) if(maskData[i] > maxVal) maxVal = maskData[i];
+    const debugCanvas = document.createElement('canvas');
+    debugCanvas.width = mw; debugCanvas.height = mh;
+    const debugCtx = debugCanvas.getContext('2d');
+    const debugImgData = debugCtx.createImageData(mw, mh);
+    for(let i=0;i<maskData.length;i++){
+      const v = maxVal > 0 ? Math.round((maskData[i] / maxVal) * 255) : 0;
+      debugImgData.data[i*4+0] = v;
+      debugImgData.data[i*4+1] = v;
+      debugImgData.data[i*4+2] = v;
+      debugImgData.data[i*4+3] = 255;
+    }
+    debugCtx.putImageData(debugImgData, 0, 0);
+    ctx.clearRect(0,0,w,h);
+    ctx.drawImage(debugCanvas, 0, 0, mw, mh, 0, 0, w, h);
+    ctx.fillStyle = 'rgba(255,107,74,0.9)';
+    ctx.font = '20px monospace';
+    ctx.fillText('DIAGNÓSTICO — máx valor: ' + maxVal, 10, 30);
+    return;
+  }
+
+  // 1. fondo Copacabana
+  drawCover(bgImg, w, h, ctx);
+
+  // 2. construir máscara binaria (categoría 0 = persona en selfie_segmenter)
   const maskCanvas = document.createElement('canvas');
   maskCanvas.width = mw; maskCanvas.height = mh;
   const maskCtx = maskCanvas.getContext('2d');
@@ -376,7 +406,6 @@ retryBtn.addEventListener('click', () => {
   shootBtn.disabled = false;
 });
 
-  
 downloadBtn.addEventListener('click', () => {
   if(!frozenDataUrl) return;
   const a = document.createElement('a');
