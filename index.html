@@ -366,7 +366,7 @@ function drawComposite(result){
   // 1. fondo Copacabana
   drawCover(bgImg, w, h, ctx);
 
-  // 2. construir máscara binaria (categoría 0 = persona en selfie_segmenter)
+  // 2. construir máscara binaria, en su resolución nativa (mw x mh)
   const maskCanvas = document.createElement('canvas');
   maskCanvas.width = mw; maskCanvas.height = mh;
   const maskCtx = maskCanvas.getContext('2d');
@@ -381,15 +381,18 @@ function drawComposite(result){
   }
   maskCtx.putImageData(imgData, 0, 0);
 
-  // 3. recortar el video con esa máscara y pegarlo encima del fondo
-  const personCanvas = document.createElement('canvas');
-  personCanvas.width = w; personCanvas.height = h;
-  const personCtx = personCanvas.getContext('2d');
-  drawCover(video, w, h, personCtx);
-  personCtx.globalCompositeOperation = 'destination-in';
-  personCtx.drawImage(maskCanvas, 0, 0, mw, mh, 0, 0, w, h);
+  // 3. dibujar el video en SU resolución nativa (sin recortar todavía),
+  //    para que coincida exactamente con el sistema de coordenadas de la máscara
+  const vw = video.videoWidth, vh = video.videoHeight;
+  const nativeCanvas = document.createElement('canvas');
+  nativeCanvas.width = vw; nativeCanvas.height = vh;
+  const nativeCtx = nativeCanvas.getContext('2d');
+  nativeCtx.drawImage(video, 0, 0, vw, vh);
+  nativeCtx.globalCompositeOperation = 'destination-in';
+  nativeCtx.drawImage(maskCanvas, 0, 0, mw, mh, 0, 0, vw, vh);
 
-  ctx.drawImage(personCanvas, 0, 0);
+  // 4. ahora sí, recortar ("cover") el resultado ya alineado, igual que el fondo
+  drawCover(nativeCanvas, w, h, ctx);
 }
 
 startCamera();
