@@ -109,6 +109,7 @@
   <button class="secondary" id="flipBtn">Cambiar cámara</button>
   <button class="secondary" id="invertBtn">Invertir recorte</button>
   <button class="secondary" id="debugBtn">Ver máscara (diagnóstico)</button>
+  <button class="secondary" id="debugVideoBtn">Ver video crudo</button>
   <button class="secondary" id="retryBtn" style="display:none;">Repetir</button>
   <button class="secondary" id="downloadBtn" style="display:none;">Descargar</button>
 </div>
@@ -284,6 +285,13 @@ document.getElementById('invertBtn').addEventListener('click', () => {
 let debugMode = false;
 document.getElementById('debugBtn').addEventListener('click', () => {
   debugMode = !debugMode;
+  debugVideoMode = false;
+});
+
+let debugVideoMode = false;
+document.getElementById('debugVideoBtn').addEventListener('click', () => {
+  debugVideoMode = !debugVideoMode;
+  debugMode = false;
 });
 
 function drawCover(image, w, h, targetCtx){
@@ -320,6 +328,16 @@ function drawComposite(result){
   const mask = result.categoryMask;
   const maskData = mask.getAsUint8Array();
   const mw = mask.width, mh = mask.height;
+
+  if(debugVideoMode){
+    // Modo diagnóstico: muestra el video crudo sin ninguna máscara, para confirmar que la cámara sí dibuja
+    ctx.clearRect(0,0,w,h);
+    drawCover(video, w, h, ctx);
+    ctx.fillStyle = 'rgba(255,107,74,0.9)';
+    ctx.font = '20px monospace';
+    ctx.fillText('VIDEO CRUDO (sin máscara)', 10, 30);
+    return;
+  }
 
   if(debugMode){
     // Modo diagnóstico: muestra el valor crudo de cada píxel como escala de grises
