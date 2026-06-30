@@ -28,7 +28,7 @@
     padding: 24px 16px 60px;
   }
 
-  header{ text-align:center; margin-bottom: 28px; max-width: 640px; }
+  header{ text-align:center; margin-bottom: 24px; max-width: 640px; }
   .eyebrow{ font-size: 12px; letter-spacing: 3px; text-transform: uppercase; color: var(--coral); margin-bottom: 10px; }
   h1{ font-family: 'Fraunces', serif; font-weight: 900; font-size: clamp(28px, 6vw, 52px); line-height: 1.0; color: var(--sand); }
   h1 em{ font-style: italic; color: var(--sun); }
@@ -92,14 +92,14 @@
 
 <header>
   <div class="eyebrow">Sala Copacabana</div>
-  <h1>Tu foto, <em>al instante</em>,<br>desde la oficina hasta la playa</h1>
-  <p class="sub">La cámara recorta a la persona en tu navegador y la pega sobre el fondo de Copacabana. No se llama a ningún modelo de IA por foto, ni gasta créditos.</p>
+  <h1>Tu foto, <em>enmarcada</em>,<br>directo desde la oficina</h1>
+  <p class="sub">Sostén el ala delta y sonríe — el marco de Copacabana se agrega al instante, sin IA ni procesamiento por foto.</p>
 </header>
 
 <div class="stage">
   <video id="video" autoplay playsinline muted></video>
   <canvas id="output"></canvas>
-  <div class="status"><span class="dot" id="statusDot"></span><span id="statusText">Cargando modelo…</span></div>
+  <div class="status"><span class="dot" id="statusDot"></span><span id="statusText">Iniciando cámara…</span></div>
   <div class="countdown" id="countdown"></div>
   <div class="flash" id="flash"></div>
 </div>
@@ -107,23 +107,15 @@
 <div class="controls">
   <button class="primary" id="shootBtn" disabled>Tomar foto</button>
   <button class="secondary" id="flipBtn">Cambiar cámara</button>
-  <button class="secondary" id="invertBtn">Invertir recorte</button>
-  <button class="secondary" id="debugBtn">Ver máscara (diagnóstico)</button>
-  <button class="secondary" id="debugVideoBtn">Ver video crudo</button>
   <button class="secondary" id="retryBtn" style="display:none;">Repetir</button>
   <button class="secondary" id="downloadBtn" style="display:none;">Descargar</button>
 </div>
 
 <footer>
-  <strong>Si la cámara queda sin recorte:</strong> revisa el mensaje de estado en la esquina superior del recuadro — ahí se muestra el error exacto si el modelo no carga.
+  <strong>¿Quieres usar tu propia foto de Río?</strong> sube un archivo <code>copacabana.jpg</code> junto a <code>index.html</code> en el repo — el marco la usa automáticamente.
 </footer>
 
-<script type="module">
-import {
-  ImageSegmenter,
-  FilesetResolver
-} from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs";
-
+<script>
 const video = document.getElementById('video');
 const canvas = document.getElementById('output');
 const ctx = canvas.getContext('2d');
@@ -135,164 +127,61 @@ const downloadBtn = document.getElementById('downloadBtn');
 const countdownEl = document.getElementById('countdown');
 const flashEl = document.getElementById('flash');
 
-let bgImg = new Image();
-let bgReady = false;
-let imageSegmenter = null;
-let modelReady = false;
-let streaming = false;
 let frozen = false;
 let frozenDataUrl = null;
+let streaming = false;
+let currentFacing = 'user';
+let currentStream = null;
 
 function setStatus(text, state){
   statusText.textContent = text;
   statusDot.className = 'dot' + (state ? ' ' + state : '');
 }
 
-// Fondo: foto real de Río subida al repo (mismo nombre, junto a index.html)
-bgImg.onload = () => { bgReady = true; checkReady(); };
-bgImg.onerror = () => { setStatus('No se encontró copacabana.jpg en el repo', 'error'); };
+// Imagen de fondo para el marco: intenta usar copacabana.jpg si existe,
+// si no, usa una ilustración generada en código (sin derechos de autor).
+let bgImg = new Image();
+let bgReady = false;
+bgImg.onload = () => { bgReady = true; };
+bgImg.onerror = () => { buildIllustratedBackground(); };
 bgImg.src = "copacabana.jpg";
 
-// --- Ala delta digital, posicionada sobre la persona (como si volara con ella) ---
-// Si tienes una foto recortada (PNG transparente) del ala delta real, súbela como
-// "hangglider.png" junto a index.html y descomenta estas 2 líneas para usarla en vez del dibujo:
-// let realGlider = new Image(); let realGliderReady = false;
-// realGlider.onload = () => realGliderReady = true; realGlider.src = "hangglider.png";
-
-function drawHangGlider(targetCtx, w, h, personBoundsY){
-  const cx = w * 0.5;
-  const topY = personBoundsY !== null ? Math.max(personBoundsY - h*0.22, h*0.04) : h*0.12;
-  const s = w * 0.34;
-
-  targetCtx.save();
-  targetCtx.translate(cx, topY);
-
-  targetCtx.fillStyle = 'rgba(255, 201, 77, 0.96)';
-  targetCtx.strokeStyle = 'rgba(10,36,33,0.65)';
-  targetCtx.lineWidth = 3;
-  targetCtx.beginPath();
-  targetCtx.moveTo(0, -s*0.12);
-  targetCtx.lineTo(s*0.55, s*0.22);
-  targetCtx.lineTo(0, s*0.10);
-  targetCtx.lineTo(-s*0.55, s*0.22);
-  targetCtx.closePath();
-  targetCtx.fill();
-  targetCtx.stroke();
-
-  targetCtx.fillStyle = 'rgba(255, 107, 74, 0.92)';
-  targetCtx.beginPath();
-  targetCtx.moveTo(0, -s*0.12);
-  targetCtx.lineTo(s*0.28, s*0.04);
-  targetCtx.lineTo(0, s*0.10);
-  targetCtx.lineTo(-s*0.28, s*0.04);
-  targetCtx.closePath();
-  targetCtx.fill();
-
-  // barra de control, hacia donde se sujetaría la persona
-  targetCtx.strokeStyle = 'rgba(10,36,33,0.7)';
-  targetCtx.lineWidth = 3;
-  targetCtx.beginPath();
-  targetCtx.moveTo(-s*0.18, s*0.10);
-  targetCtx.lineTo(-s*0.18, s*0.34);
-  targetCtx.moveTo(s*0.18, s*0.10);
-  targetCtx.lineTo(s*0.18, s*0.34);
-  targetCtx.moveTo(-s*0.18, s*0.34);
-  targetCtx.lineTo(s*0.18, s*0.34);
-  targetCtx.stroke();
-
-  targetCtx.restore();
-}
-
-function checkReady(){
-  if(modelReady && bgReady){
-    setStatus('Listo', 'ready');
-    shootBtn.disabled = false;
+function buildIllustratedBackground(){
+  const c = document.createElement('canvas');
+  c.width = 1280; c.height = 960;
+  const bctx = c.getContext('2d');
+  const sky = bctx.createLinearGradient(0,0,0,560);
+  sky.addColorStop(0, '#FF8C5A');
+  sky.addColorStop(0.5, '#FFC94D');
+  sky.addColorStop(1, '#F3E3C3');
+  bctx.fillStyle = sky;
+  bctx.fillRect(0,0,1280,560);
+  bctx.beginPath();
+  bctx.arc(950, 240, 90, 0, Math.PI*2);
+  bctx.fillStyle = '#FFE9B0';
+  bctx.fill();
+  bctx.fillStyle = '#1C5C53';
+  bctx.beginPath();
+  bctx.moveTo(700,560);
+  bctx.quadraticCurveTo(820,260,920,300);
+  bctx.quadraticCurveTo(1000,330,1040,560);
+  bctx.closePath();
+  bctx.fill();
+  for(let i=0;i<22;i++){
+    const x = i*60;
+    const h = 60 + Math.sin(i*1.3)*20 + 40;
+    bctx.fillStyle = i%2===0 ? '#EFE0C6' : '#E2D2B6';
+    bctx.fillRect(x, 560-h, 50, h);
   }
+  const sea = bctx.createLinearGradient(0,560,0,960);
+  sea.addColorStop(0, '#0E4F4A');
+  sea.addColorStop(1, '#0A3733');
+  bctx.fillStyle = sea;
+  bctx.fillRect(0,560,1280,400);
+  bgImg.onerror = null;
+  bgImg.src = c.toDataURL('image/jpeg', 0.92);
+  bgReady = true;
 }
-
-async function initSegmenter(){
-  const timeoutId = setTimeout(() => {
-    if(!modelReady){
-      setStatus('El modelo tardó demasiado en cargar. Revisa tu conexión a internet y recarga la página.', 'error');
-    }
-  }, 15000);
-
-  try{
-    setStatus('Descargando modelo de IA local…');
-    const vision = await FilesetResolver.forVisionTasks(
-      "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm"
-    );
-    imageSegmenter = await ImageSegmenter.createFromOptions(vision, {
-      baseOptions: {
-        modelAssetPath: "https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/latest/selfie_segmenter.tflite",
-        delegate: "CPU"
-      },
-      runningMode: "VIDEO",
-      outputCategoryMask: true,
-      outputConfidenceMasks: false
-    });
-    clearTimeout(timeoutId);
-    modelReady = true;
-    checkReady();
-    requestAnimationFrame(renderLoop);
-  }catch(err){
-    clearTimeout(timeoutId);
-    console.error(err);
-    setStatus('Error cargando el modelo: ' + (err.message || err), 'error');
-  }
-}
-
-let currentFacing = 'user';
-let currentStream = null;
-
-async function startCamera(){
-  try{
-    setStatus('Pidiendo permiso de cámara…');
-    if(currentStream){
-      currentStream.getTracks().forEach(t => t.stop());
-    }
-    streaming = false;
-    lastVideoTime = -1;
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: currentFacing, width: 1280, height: 960 }
-    });
-    currentStream = stream;
-    video.srcObject = stream;
-    await video.play();
-    streaming = true;
-    if(!modelReady){
-      initSegmenter();
-    } else {
-      setStatus('Listo', 'ready');
-    }
-  }catch(e){
-    console.error(e);
-    streaming = false;
-    setStatus('No se pudo cambiar de cámara: ' + (e.message || e) + ' — toca "Cambiar cámara" para volver a intentar.', 'error');
-  }
-}
-
-document.getElementById('flipBtn').addEventListener('click', () => {
-  currentFacing = currentFacing === 'user' ? 'environment' : 'user';
-  startCamera();
-});
-
-let maskInvert = true;
-document.getElementById('invertBtn').addEventListener('click', () => {
-  maskInvert = !maskInvert;
-});
-
-let debugMode = false;
-document.getElementById('debugBtn').addEventListener('click', () => {
-  debugMode = !debugMode;
-  debugVideoMode = false;
-});
-
-let debugVideoMode = false;
-document.getElementById('debugVideoBtn').addEventListener('click', () => {
-  debugVideoMode = !debugVideoMode;
-  debugMode = false;
-});
 
 function drawCover(image, w, h, targetCtx){
   const ir = image.width / image.height;
@@ -306,96 +195,96 @@ function drawCover(image, w, h, targetCtx){
   targetCtx.drawImage(image, sx, sy, sw, sh, 0, 0, w, h);
 }
 
-let lastVideoTime = -1;
-function renderLoop(){
-  if(streaming && modelReady && !frozen){
-    if(video.currentTime !== lastVideoTime){
-      lastVideoTime = video.currentTime;
-      const startTimeMs = performance.now();
-      imageSegmenter.segmentForVideo(video, startTimeMs, (result) => {
-        drawComposite(result);
-      });
-    }
+const FRAME = 0.10; // grosor del marco como % del ancho
+
+function drawFrame(w, h){
+  const f = Math.round(Math.min(w, h) * FRAME);
+
+  // marco superior e inferior con el paisaje
+  if(bgReady){
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, w, f);
+    ctx.clip();
+    drawCover(bgImg, w, f * 4, ctx);
+    ctx.restore();
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, h - f, w, f);
+    ctx.clip();
+    ctx.translate(0, h - f);
+    drawCover(bgImg, w, f * 4, ctx);
+    ctx.restore();
   }
-  requestAnimationFrame(renderLoop);
+
+  // bandas laterales sólidas para que quede como marco completo
+  ctx.fillStyle = '#0A2421';
+  ctx.fillRect(0, 0, f * 0.4, h);
+  ctx.fillRect(w - f * 0.4, 0, f * 0.4, h);
+
+  // línea dorada decorativa
+  ctx.strokeStyle = 'rgba(255,201,77,0.9)';
+  ctx.lineWidth = Math.max(2, f * 0.04);
+  ctx.strokeRect(f*0.4, f, w - f*0.8, h - f*2);
+
+  // texto de marca
+  ctx.fillStyle = '#F3E3C3';
+  ctx.font = `700 ${Math.round(f*0.32)}px 'Space Mono', monospace`;
+  ctx.textAlign = 'center';
+  ctx.fillText('SALA COPACABANA', w/2, f*0.65);
 }
 
-function drawComposite(result){
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-  const w = canvas.width, h = canvas.height;
+function render(){
+  if(!frozen && streaming){
+    canvas.width = video.videoWidth || 1280;
+    canvas.height = video.videoHeight || 960;
+    const w = canvas.width, h = canvas.height;
+    const f = Math.round(Math.min(w,h) * FRAME);
 
-  const mask = result.categoryMask;
-  const maskData = mask.getAsUint8Array();
-  const mw = mask.width, mh = mask.height;
-
-  if(debugVideoMode){
-    // Modo diagnóstico: muestra el video crudo sin ninguna máscara, para confirmar que la cámara sí dibuja
     ctx.clearRect(0,0,w,h);
+    // cámara en vivo recortada al área interior del marco
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(f*0.4, f, w - f*0.8, h - f*2);
+    ctx.clip();
     drawCover(video, w, h, ctx);
-    ctx.fillStyle = 'rgba(255,107,74,0.9)';
-    ctx.font = '20px monospace';
-    ctx.fillText('VIDEO CRUDO (sin máscara)', 10, 30);
-    return;
-  }
+    ctx.restore();
 
-  if(debugMode){
-    // Modo diagnóstico: muestra el valor crudo de cada píxel como escala de grises
-    let maxVal = 0;
-    for(let i=0;i<maskData.length;i++) if(maskData[i] > maxVal) maxVal = maskData[i];
-    const debugCanvas = document.createElement('canvas');
-    debugCanvas.width = mw; debugCanvas.height = mh;
-    const debugCtx = debugCanvas.getContext('2d');
-    const debugImgData = debugCtx.createImageData(mw, mh);
-    for(let i=0;i<maskData.length;i++){
-      const v = maxVal > 0 ? Math.round((maskData[i] / maxVal) * 255) : 0;
-      debugImgData.data[i*4+0] = v;
-      debugImgData.data[i*4+1] = v;
-      debugImgData.data[i*4+2] = v;
-      debugImgData.data[i*4+3] = 255;
+    drawFrame(w, h);
+  }
+  requestAnimationFrame(render);
+}
+
+async function startCamera(){
+  try{
+    setStatus('Pidiendo permiso de cámara…');
+    if(currentStream){
+      currentStream.getTracks().forEach(t => t.stop());
     }
-    debugCtx.putImageData(debugImgData, 0, 0);
-    ctx.clearRect(0,0,w,h);
-    ctx.drawImage(debugCanvas, 0, 0, mw, mh, 0, 0, w, h);
-    ctx.fillStyle = 'rgba(255,107,74,0.9)';
-    ctx.font = '20px monospace';
-    ctx.fillText('DIAGNÓSTICO — máx valor: ' + maxVal, 10, 30);
-    return;
+    streaming = false;
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: currentFacing, width: 1280, height: 960 }
+    });
+    currentStream = stream;
+    video.srcObject = stream;
+    await video.play();
+    streaming = true;
+    setStatus('Listo', 'ready');
+    shootBtn.disabled = false;
+  }catch(e){
+    console.error(e);
+    setStatus('No se pudo acceder a la cámara: ' + (e.message || e), 'error');
   }
-
-  // 1. fondo Copacabana
-  drawCover(bgImg, w, h, ctx);
-
-  // 2. construir máscara binaria, en su resolución nativa (mw x mh)
-  const maskCanvas = document.createElement('canvas');
-  maskCanvas.width = mw; maskCanvas.height = mh;
-  const maskCtx = maskCanvas.getContext('2d');
-  const imgData = maskCtx.createImageData(mw, mh);
-  for(let i=0;i<maskData.length;i++){
-    const v = maskData[i];
-    const isPerson = (maskInvert ? v < 128 : v >= 128) ? 255 : 0;
-    imgData.data[i*4+0] = 255;
-    imgData.data[i*4+1] = 255;
-    imgData.data[i*4+2] = 255;
-    imgData.data[i*4+3] = isPerson;
-  }
-  maskCtx.putImageData(imgData, 0, 0);
-
-  // 3. dibujar el video en SU resolución nativa (sin recortar todavía),
-  //    para que coincida exactamente con el sistema de coordenadas de la máscara
-  const vw = video.videoWidth, vh = video.videoHeight;
-  const nativeCanvas = document.createElement('canvas');
-  nativeCanvas.width = vw; nativeCanvas.height = vh;
-  const nativeCtx = nativeCanvas.getContext('2d');
-  nativeCtx.drawImage(video, 0, 0, vw, vh);
-  nativeCtx.globalCompositeOperation = 'destination-in';
-  nativeCtx.drawImage(maskCanvas, 0, 0, mw, mh, 0, 0, vw, vh);
-
-  // 4. ahora sí, recortar ("cover") el resultado ya alineado, igual que el fondo
-  drawCover(nativeCanvas, w, h, ctx);
 }
 
 startCamera();
+render();
+
+document.getElementById('flipBtn').addEventListener('click', () => {
+  currentFacing = currentFacing === 'user' ? 'environment' : 'user';
+  startCamera();
+});
 
 shootBtn.addEventListener('click', () => {
   let n = 3;
